@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appraisal Unit Bekas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';document.head.appendChild(s)"></script>
+<style>
+/* Layout idea: kolom input di kiri, aksi + hasil + kurva depresiasi di kanan; versi Sederhana menyembunyikan input lanjutan. */
+:root{
+  --bg:#eceff2; --surface:#ffffff; --ink:#1b2127; --muted:#5b6670; --line:#d5dadf; --accent:#e0a100; --accent-ink:#1b2127;
+  --good:#1f7a46; --warn:#a85f00; --bad:#b83225; --soft:#f5f7f9;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif; --body:'IBM Plex Sans','Segoe UI',Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14181c; --surface:#1d2328; --ink:#e8ecef; --muted:#9aa6b0; --line:#323b43; --accent:#f2b21a; --accent-ink:#14181c;
+    --good:#4cc47f; --warn:#e8a43a; --bad:#ff7a6b; --soft:#252c33; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181c; --surface:#1d2328; --ink:#e8ecef; --muted:#9aa6b0; --line:#323b43; --accent:#f2b21a; --accent-ink:#14181c;
+  --good:#4cc47f; --warn:#e8a43a; --bad:#ff7a6b; --soft:#252c33; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body[data-mode="simple"] .adv{display:none !important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--accent);padding-bottom:12px;margin-bottom:18px}
+h1{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0}
+.tools{display:flex;gap:10px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px;text-wrap:balance}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f.full{grid-column:1/-1}
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tri .tl{font-size:11.5px;color:var(--muted)}
+.tri .on input{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+label{font-size:12.5px;color:var(--muted);font-weight:500}
+input,select{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:11.5px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;font-weight:600;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:7px 12px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.actions button{padding:10px 18px;font-size:15px}
+.lang{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.lang button{background:transparent;color:var(--muted);border-radius:0;padding:6px 12px;font-size:13px}
+.lang button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.modenote{font-size:12.5px;color:var(--muted);border-left:3px solid var(--accent);padding:2px 10px;margin:0}
+.comp{display:grid;grid-template-columns:1.1fr 1.2fr .8fr;gap:8px;align-items:center}
+.comp .ch{font-size:11.5px;color:var(--muted);font-weight:500}
+.comp .cn{font-size:13.5px}
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px;border-left:5px solid var(--line)}
+.tile.main{border-left-color:var(--accent)}
+.tile .k{font-size:12.5px;color:var(--muted);font-weight:500}
+.tile .v{font-family:var(--display);font-size:34px;font-weight:700;line-height:1.1;overflow-wrap:anywhere}
+.tile .s{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500}
+td.n,th.n{text-align:right;white-space:nowrap}
+td.note{color:var(--muted);font-size:12.5px}
+tr.sum td{font-weight:600;background:var(--soft)}
+tr.neg td.n{color:var(--bad)}
+tr.sel td{font-weight:600;background:var(--soft)}
+tr.sec td{font-family:var(--display);font-size:16px;text-transform:uppercase;letter-spacing:.03em;background:var(--soft);border-bottom:2px solid var(--accent)}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;border:1px solid currentColor}
+.pill.good{color:var(--good)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}
+.alert{border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+.report{border-left:5px solid var(--accent)}
+.report .meta{color:var(--muted);font-size:13px;margin:0 0 8px}
+.report .concl{margin:12px 0 0;padding:10px 12px;background:var(--soft);border-radius:6px}
+.report .rt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-family:var(--body);font-size:11px}
+.gridline{stroke:var(--line);stroke-width:1}
+.curve{stroke:var(--accent);stroke-width:3;fill:none}
+.area{fill:var(--accent);opacity:.12}
+.floor{stroke:var(--muted);stroke-dasharray:4 4;stroke-width:1}
+.mark{fill:var(--ink)}
+.markline{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3}
+#results.stale{opacity:.5}
+.foot{font-size:12.5px;color:var(--muted)}
+.foot p{margin:4px 0}
+</style>
+</head>
+<body data-mode="simple">
+<div class="wrap">
+  <header>
+    <div>
+      <h1 data-i18n="h1"></h1>
+      <p class="sub" data-i18n="sub"></p>
+    </div>
+    <div class="tools">
+      <div class="lang" role="group" data-i18n-aria="modeLabel">
+        <button type="button" id="modeSimple" aria-pressed="true" data-i18n="modeSimple"></button>
+        <button type="button" id="modeAdv" aria-pressed="false" data-i18n="modeAdv"></button>
+      </div>
+      <div class="lang" role="group" data-i18n-aria="curLabel">
+        <button type="button" id="curUsd" aria-pressed="true">US$</button>
+        <button type="button" id="curIdr" aria-pressed="false">Rp</button>
+      </div>
+      <div class="lang" role="group" data-i18n-aria="langLabel">
+        <button type="button" id="langId" aria-pressed="true">ID</button>
+        <button type="button" id="langEn" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2 data-i18n="s1"></h2>
+        <div class="fields">
+          <div class="f full">
+            <label for="preset" data-i18n="lPreset"></label>
+            <select id="preset"></select>
+          </div>
+          <div class="f">
+            <label for="work" data-i18n="lWork"></label>
+            <select id="work">
+              <option value="0" data-i18n="wLight"></option>
+              <option value="1" data-i18n="wMed"></option>
+              <option value="2" data-i18n="wHeavy"></option>
+            </select>
+          </div>
+          <div class="f"><label for="price" data-i18n="lPrice"></label><input id="price" type="number" min="0"></div>
+          <div class="f"><label for="res" data-i18n="lRes"></label><input id="res" type="number" min="0" max="100" step="1"></div>
+          <div class="f adv"><label for="annual" data-i18n="lAnnual"></label><input id="annual" type="number" min="1" step="100"></div>
+          <div class="f full">
+            <label data-i18n="lLife"></label>
+            <div class="tri" id="triLife">
+              <div class="t0"><div class="tl" data-i18n="wLightS"></div><input id="lifeL" type="number" min="1" step="500" data-i18n-aria="wLight"></div>
+              <div class="t1"><div class="tl" data-i18n="wMedS"></div><input id="lifeM" type="number" min="1" step="500" data-i18n-aria="wMed"></div>
+              <div class="t2"><div class="tl" data-i18n="wHeavyS"></div><input id="lifeH" type="number" min="1" step="500" data-i18n-aria="wHeavy"></div>
+            </div>
+          </div>
+          <div class="f adv"><label for="tyre" data-i18n="lTyre"></label><input id="tyre" type="number" min="0"></div>
+          <div class="f full hint" data-i18n="hint1"></div>
+        </div>
+        <div class="row adv">
+          <input id="pname" type="text" data-i18n-ph="phPname" data-i18n-aria="phPname" style="flex:1;min-width:140px">
+          <button class="ghost" id="savePreset" type="button" data-i18n="btnSave"></button>
+        </div>
+        <div class="hint adv" id="saveMsg" role="status"></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="s2"></h2>
+        <div class="fields">
+          <div class="f adv"><label for="uid" data-i18n="lUid"></label><input id="uid" type="text" maxlength="60"></div>
+          <div class="f adv"><label for="seller" data-i18n="lSeller"></label><input id="seller" type="text" maxlength="80"></div>
+          <div class="f adv"><label for="year" data-i18n="lYear"></label><input id="year" type="number" min="1980" max="2100" step="1"></div>
+          <div class="f"><label for="hm" data-i18n="lHm"></label><input id="hm" type="number" min="0" step="100"></div>
+          <div class="f"><label for="cond" data-i18n="lCond"></label><input id="cond" type="number" min="0" max="150" step="1"></div>
+          <div class="f adv"><label for="tread" data-i18n="lTread"></label><input id="tread" type="number" min="0" max="100" step="5"></div>
+          <div class="f full hint" data-i18n="hint2"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="s3"></h2>
+        <div class="fields">
+          <div class="f"><label for="repair" data-i18n="lRepair"></label><input id="repair" type="number" min="0"></div>
+          <div class="f"><label for="margin" data-i18n="lMargin"></label><input id="margin" type="number" min="0" max="80" step="1"></div>
+          <div class="f adv"><label for="logi" data-i18n="lLogi"></label><input id="logi" type="number" min="0"></div>
+          <div class="f"><label for="fx" data-i18n="lFx"></label><input id="fx" type="number" min="1" step="50"></div>
+          <div class="f full adv"><label for="mkt" data-i18n="lMkt"></label><input id="mkt" type="number" min="0" data-i18n-ph="phMkt"></div>
+          <div class="f full hint" data-i18n="hint3"></div>
+        </div>
+      </section>
+
+      <section class="card adv" id="cardComp">
+        <h2 data-i18n="s4"></h2>
+        <div class="fields">
+          <div class="f full"><label for="ohw" data-i18n="lOhw"></label><input id="ohw" type="number" min="0" max="100" step="5"></div>
+        </div>
+        <div class="comp" id="compGrid" style="margin-top:10px">
+          <div class="ch" data-i18n="thComp"></div><div class="ch" data-i18n="thCost"></div><div class="ch" data-i18n="thUsed"></div>
+        </div>
+        <div class="hint" style="margin-top:8px" data-i18n="hint4"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <div class="actions">
+        <button type="button" id="btnAppraisal" data-i18n="bAppraisal"></button>
+        <button type="button" class="ghost" id="btnExport" data-i18n="bExport"></button>
+        <span class="hint" id="actMsg" role="status"></span>
+      </div>
+      <p class="modenote" id="modeNote"></p>
+
+      <section class="card report" id="report" hidden>
+        <div class="rt">
+          <div>
+            <h2 data-i18n="repTitle" style="margin-bottom:2px"></h2>
+            <p class="meta" id="repMeta"></p>
+          </div>
+          <button type="button" class="ghost" id="repClose" data-i18n="repClose"></button>
+        </div>
+        <div class="scroll"><table><tbody id="repRows"></tbody></table></div>
+        <p class="concl" id="repConcl"></p>
+        <p class="hint" data-i18n="repDisclaimer"></p>
+        <div class="row">
+          <button type="button" class="ghost" id="repCopy" data-i18n="repCopy"></button>
+          <span class="hint" id="repMsg" role="status"></span>
+        </div>
+      </section>
+
+      <p class="modenote" id="placeholder" data-i18n="placeholder"></p>
+      <div id="stale" class="alert" hidden role="status" data-i18n="staleMsg"></div>
+      <div id="results" class="col" hidden>
+      <div id="warn"></div>
+      <div class="hero">
+        <div class="tile main"><div class="k" data-i18n="kBid"></div><div class="v" id="tBid">-</div><div class="s" id="tBidRp"></div></div>
+        <div class="tile"><div class="k" data-i18n="kFair"></div><div class="v" id="tFair">-</div><div class="s" id="tFairRp"></div></div>
+        <div class="tile"><div class="k" data-i18n="kBook"></div><div class="v" id="tBook">-</div><div class="s" id="tBookS"></div></div>
+      </div>
+
+      <section class="card">
+        <h2 data-i18n="hRows"></h2>
+        <div class="scroll"><table>
+          <thead><tr><th data-i18n="thItem"></th><th class="n" id="thCur">US$</th><th data-i18n="thHow"></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="hCond"></h2>
+        <div class="scroll"><table>
+          <thead><tr><th data-i18n="thWork"></th><th class="n" data-i18n="thLife"></th><th class="n" data-i18n="thBookNt"></th><th class="n" data-i18n="thDiffSel"></th></tr></thead>
+          <tbody id="condTbl"></tbody>
+        </table></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="hChart"></h2>
+        <div id="chart" role="img" data-i18n-aria="chartAria"></div>
+        <div class="foot" id="usage"></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="hSens"></h2>
+        <div class="scroll"><table>
+          <thead><tr><th>HM</th><th class="n" data-i18n="thBookNt"></th><th class="n" data-i18n="thDiff"></th></tr></thead>
+          <tbody id="sens"></tbody>
+        </table></div>
+      </section>
+
+      </div>
+
+      <section class="card foot" data-i18n-html="footer"></section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var CATRAW = [["120H",20000,15000,12000],["120G",20000,15000,12000],["12G",20000,15000,12000],["12H",20000,15000,12000],["130G",20000,15000,12000],["135H",20000,15000,12000],["140H",20000,15000,12000],["140G",20000,15000,12000],["143H",20000,15000,12000],["143H AWD",20000,15000,12000],["14G",20000,15000,12000],["14H",20000,15000,12000],["160H",20000,15000,12000],["163H",20000,15000,12000],["163H AWD",20000,15000,12000],["16G",20000,15000,12000],["16H",20000,15000,12000],["24H",40000,35000,30000],["215D",12000,10000,8000],["215D AMPHI",12000,10000,8000],["215D SA",12000,10000,8000],["216",12000,10000,8000],["226",12000,10000,8000],["228",12000,10000,8000],["236",18000,15000,10000],["246",18000,15000,10000],["248",18000,15000,10000],["252",18000,15000,10000],["262",18000,15000,10000],["225D",12000,10000,8000],["225D AMPHI",12000,10000,8000],["225D SA",12000,10000,8000],["235C",18000,15000,10000],["235C FS",18000,15000,10000],["235C MEH",18000,15000,10000],["245B FS",18000,15000,10000],["245B MEH",18000,15000,10000],["M312",10000,8000,6000],["M315",10000,8000,6000],["M318",10000,8000,6000],["M320",10000,8000,6000],["307C",12000,10000,8000],["307B",12000,10000,8000],["311B",12000,10000,8000],["311B LGP",12000,10000,8000],["311C U",12000,10000,8000],["312B",12000,10000,8000],["312BL",12000,10000,8000],["312C",12000,10000,8000],["312CL",12000,10000,8000],["315",12000,10000,8000],["315C",12000,10000,8000],["315CL",12000,10000,8000],["317",12000,10000,8000],["317BL",12000,10000,8000],["318BL",12000,10000,8000],["320B",15000,12000,10000],["320C",15000,12000,10000],["320CL",15000,12000,10000],["320B FM",18000,15000,10000],["320BL",15000,12000,10000],["322B",15000,12000,10000],["322C",15000,12000,10000],["322CL",15000,12000,10000],["322B FM",18000,15000,10000],["322BL",15000,12000,10000],["325B",15000,12000,10000],["325B FM",18000,15000,10000],["325BL",15000,12000,10000],["325CL",15000,12000,10000],["330B",15000,12000,10000],["330B FM",18000,15000,10000],["330C",15000,12000,10000],["330BL",15000,12000,10000],["330CL",15000,12000,10000],["345B",20000,18000,15000],["345BL",20000,18000,15000],["350",20000,18000,15000],["350L",20000,18000,15000],["365B",20000,18000,15000],["365BL",20000,18000,15000],["375",20000,18000,15000],["375L",20000,18000,15000],["385B",20000,18000,15000],["5080FS",20000,18000,15000],["5090FS",20000,18000,15000],["5110FS",40000,33000,25000],["5110ME",40000,33000,25000],["5110BME",40000,33000,25000],["5130BFS",60000,50000,40000],["5130BME",60000,50000,40000],["5230FS",60000,50000,40000],["5230BFS",60000,50000,40000],["5230ME",60000,50000,40000],["5230BME",60000,50000,40000],["245B SERIES II",18000,15000,10000],["416B",12000,10000,5000],["416C",12000,10000,5000],["416C  TURBO",12000,10000,5000],["416D",12000,10000,5000],["420D",12000,10000,5000],["424D",12000,10000,5000],["428D",12000,10000,5000],["430D",12000,10000,5000],["432D",12000,10000,5000],["438D",12000,10000,5000],["442D",12000,10000,5000],["426B",12000,10000,5000],["426C",12000,10000,5000],["428B",12000,10000,5000],["428C",12000,10000,5000],["428C TURBO",12000,10000,5000],["436B",12000,10000,5000],["436C",12000,10000,5000],["438B",12000,10000,5000],["438C",12000,10000,5000],["446B",12000,10000,5000],["D4H TSK SERIES III",12000,10000,8000],["527 CABLE",12000,10000,8000],["527 GRAPPLE",12000,10000,8000],["508",10000,8000,7200],["515",10000,8000,7200],["518 CABLE",10000,8000,7200],["518 GRAPPLE",10000,8000,7200],["525",10000,8000,7200],["525B",10000,8000,7200],["528B",10000,8000,7200],["561M",20000,15000,10000],["571G",20000,15000,10000],["572R",20000,15000,10000],["572G",20000,15000,10000],["578",25000,20000,15000],["583R",15000,13000,10000],["583K",15000,13000,10000],["589",25000,20000,15000],["594H",15000,13000,10000],["611",12000,10000,8000],["613C SERIES II",12000,10000,8000],["615C SERIES II",12000,10000,8000],["621F",22000,17000,12000],["621G",22000,17000,12000],["623F",22000,17000,12000],["623G",22000,17000,12000],["627E",22000,17000,12000],["627F",22000,17000,12000],["627G",22000,17000,12000],["631G",22000,17000,12000],["631E SERIES II",22000,17000,12000],["633E SERIES II",22000,17000,12000],["637E",22000,17000,12000],["637G",22000,17000,12000],["637E SERIES II",22000,17000,12000],["639D",22000,17000,12000],["651E",22000,17000,12000],["657E",22000,17000,12000],["657E PUSH PULL",22000,17000,12000],["768C",30000,20000,15000],["769C",30000,20000,15000],["769D",50000,40000,30000],["771D",50000,40000,30000],["772B",30000,20000,15000],["773D",50000,40000,30000],["773E",50000,40000,30000],["775D",50000,40000,30000],["776B",30000,20000,15000],["777D",50000,40000,30000],["784B",60000,50000,40000],["785B",60000,50000,40000],["785C",60000,50000,40000],["789B",60000,50000,40000],["789C",60000,50000,40000],["793C",60000,50000,40000],["797",60000,50000,40000],["814F",15000,12000,8000],["815B",15000,12000,8000],["815F",15000,12000,8000],["816F",15000,12000,8000],["824G",15000,12000,8000],["825C",15000,12000,8000],["825G",15000,12000,8000],["826G",15000,12000,8000],["834B",15000,12000,8000],["834G",15000,12000,8000],["844",15000,12000,8000],["836",15000,12000,8000],["910F",12000,10000,8000],["914G",12000,10000,8000],["920",12000,10000,8000],["924F",12000,10000,8000],["924GZ",12000,10000,8000],["926E",12000,10000,8000],["930",12000,10000,8000],["928G",12000,10000,8000],["931C SERIES II",12000,10000,8000],["933",8000,6000,4000],["935C SERIES II",12000,10000,8000],["938G",12000,10000,8000],["938F",12000,10000,8000],["936F",12000,10000,8000],["939",8000,6000,4000],["943",10000,10000,8000],["950F SERIES II",12000,10000,8000],["950B",12000,10000,8000],["950G",12000,10000,8000],["950G SERIES II",12000,10000,8000],["960F",12000,10000,8000],["953C",10000,8000,6000],["955L",12000,10000,8000],["962G",12000,10000,8000],["962G SERIES II",12000,10000,8000],["963B",12000,10000,8000],["966E",12000,10000,8000],["966G",12000,10000,8000],["966G SERIES II",12000,10000,8000],["966F SERIES II",12000,10000,8000],["970F",12000,10000,8000],["972G",12000,10000,8000],["972G SERIES II",12000,10000,8000],["973",12000,10000,8000],["980G",15000,12000,10000],["980G SERIES II",15000,12000,10000],["980F",15000,12000,10000],["988B",15000,12000,10000],["988F SERIES II",15000,12000,10000],["988G",15000,12000,10000],["988G SERIES II",15000,12000,10000],["990 SERIES II",15000,12000,10000],["992C",15000,12000,10000],["992D",15000,12000,10000],["992G",15000,12000,10000],["994",60000,50000,40000],["994D",60000,50000,40000],["DE4 SR",14000,12000,10000],["D6G SR",14000,12000,10000],["CHALLENGER 35",10000,8000,6000],["CHALLENGER 45",10000,8000,6000],["CHALLENGER 55",10000,8000,6000],["CHALLENGER 65D",12000,10000,8000],["CHALLENGER 75D",12000,10000,8000],["CHALLENGER 85D",12000,10000,8000],["CHALLENGER 65E",12000,10000,8000],["CHALLENGER 75E",12000,10000,8000],["CHALLENGER 85E",12000,10000,8000],["CHALLENGER 95E",12000,10000,8000],["D10N",22000,18000,15000],["D10R",50000,40000,30000],["D11N",22000,18000,15000],["D11R",50000,40000,30000],["725",15000,10000,8000],["730",15000,10000,8000],["735",15000,10000,8000],["740",15000,10000,8000],["D20D",15000,10000,8000],["D250B",15000,10000,8000],["D250D",15000,10000,8000],["D250E",15000,10000,8000],["D25D",15000,10000,8000],["D300B",15000,10000,8000],["D300D",15000,10000,8000],["D300E",15000,10000,8000],["D30D",15000,10000,8000],["D350D",15000,10000,8000],["D350E",15000,10000,8000],["D35C",15000,10000,8000],["D35HP",15000,10000,8000],["D3C LGP SERIES III",12000,10000,8000],["D3C LGP-S SERIES II",12000,10000,8000],["D3GXL",12000,10000,8000],["D3G LGP",12000,10000,8000],["D3C SA",14000,12000,10000],["D3C SERIES III",12000,10000,8000],["D400D",15000,10000,8000],["D400E",15000,10000,8000],["D40D",15000,10000,8000],["D44B",15000,10000,8000],["D4C LGP SERIES III",12000,10000,8000],["D4C SERIES III",12000,10000,8000],["D4GXL",12000,10000,8000],["D4G LGP",12000,10000,8000],["D4E SA",14000,12000,10000],["D4H LGP SERIES III",12000,10000,8000],["D4H SERIES II",12000,10000,8000],["D4H XL SERIES III",12000,10000,8000],["D5M XL",12000,10000,8000],["D5M LGP",12000,10000,8000],["D5G XL",12000,10000,8000],["D5G LGP",12000,10000,8000],["D550B",15000,10000,8000],["D5B",12000,10000,8000],["D5B LGP",12000,10000,8000],["D5B SA",14000,12000,10000],["D5C LGP SERIES III",12000,10000,8000],["D5C SERIES III",12000,10000,8000],["D5H LGP SERIES II",12000,10000,8000],["D5H SERIES II",12000,10000,8000],["D5H XL SERIES II",12000,10000,8000],["D6D",12000,10000,8000],["D6D HP",12000,10000,8000],["D6D LGP",12000,10000,8000],["D6D SA",14000,12000,10000],["D6H LGP SERIES II",12000,10000,8000],["D6H LS SERIES II",12000,10000,8000],["D6H SERIES II",12000,10000,8000],["D6H XL SERIES II",12000,10000,8000],["D6H XR SERIES II",12000,10000,8000],["D6M XL",12000,10000,8000],["D6M LGP",12000,10000,8000],["D6R",12000,10000,8000],["D6R XL",12000,10000,8000],["D6R XR",12000,10000,8000],["D6R LGP",12000,10000,8000],["D6G",12000,10000,8000],["D7G",12000,10000,8000],["D7G LGP",12000,10000,8000],["D7G SA",14000,12000,10000],["D7R",12000,10000,8000],["D7R XR",12000,10000,8000],["D7R LGP",12000,10000,8000],["D7H LGP SERIES II",12000,10000,8000],["D7H SERIES II",12000,10000,8000],["D8K",15000,12000,10000],["D8L",22000,18000,15000],["D8L SA",14000,12000,10000],["D8N",22000,18000,15000],["D8R",45000,35000,25000],["D9R",45000,35000,25000],["D9N",22000,18000,15000],["E110B",10000,8000,6000],["E120B",10000,8000,6000],["E140B",10000,8000,6000],["E180",12000,10000,8000],["E200B",12000,10000,8000],["E240B",12000,10000,8000],["E300B",12000,10000,8000],["E450",12000,10000,8000],["E450 FS",18000,15000,10000],["E650",12000,10000,8000],["E650 FS",18000,15000,10000],["E70B",10000,8000,6000],["EL200B",12000,10000,8000],["EL240B",12000,10000,8000],["EL300B",12000,10000,8000],["FB227",18000,15000,10000],["IT12F",12000,10000,8000],["IT14G",12000,10000,8000],["IT18F",12000,10000,8000],["IT24F",12000,10000,8000],["IT28G",12000,10000,8000],["TH62",12000,10000,8000],["TH63",12000,10000,8000],["TH82",12000,10000,8000],["TH83",12000,10000,8000],["TH103",12000,10000,8000],["CS-323C",12000,10000,8000],["CP-323C",12000,10000,8000],["CS-431C",12000,10000,8000],["CS-433C",12000,10000,8000],["CP-433C",12000,10000,8000],["CS-531C",12000,10000,8000],["CS-531D",12000,10000,8000],["CS-533C",12000,10000,8000],["CP-533C",12000,10000,8000],["CS-533D",12000,10000,8000],["CP-533D",12000,10000,8000],["CS-533E",12000,10000,8000],["CS-563C",12000,10000,8000],["CP-563C",12000,10000,8000],["CS-563D",12000,10000,8000],["CP-563D",12000,10000,8000],["CS-573",12000,10000,8000],["CS-573D",12000,10000,8000],["CS-583C",12000,10000,8000],["CS-583D",12000,10000,8000],["CS-663E",12000,10000,8000],["CP-663E",12000,10000,8000],["CS-683E",12000,10000,8000],["CB-214C",12000,10000,8000],["CB-214D",12000,10000,8000],["CB-224C",12000,10000,8000],["CB-224D",12000,10000,8000],["CB-225D",12000,10000,8000],["CB-334D",12000,10000,8000],["CB-434B",12000,10000,8000],["CB-534C",12000,10000,8000],["CB-535B",12000,10000,8000],["CB-544",12000,10000,8000],["CB-545",12000,10000,8000],["CB-634B",12000,10000,8000],["PS-150B",18000,15000,12000],["PS-200B",18000,15000,12000],["PF-300B",18000,15000,12000],["PS-300B",18000,15000,12000],["PS-500",18000,15000,12000],["AP-200B",15000,12000,10000],["AP-650B",18000,15000,12000],["AP-800C",18000,15000,12000],["AP-1000B",18000,15000,12000],["AP-1050B",18000,15000,12000],["AP-1055B",18000,15000,12000],["RR-250B",12000,10000,8000],["SS-250B",12000,10000,8000],["RM-350",12000,10000,8000],["RM-250C",12000,10000,8000],["SM-350",12000,10000,8000],["RM-350B",12000,10000,8000],["PR-450C",15000,12000,10000],["PM-565B",15000,12000,10000],["PM-465",15000,12000,10000]];   /* [model, jam Light, jam Medium, jam Heavy] dari tabel PHB edisi 34 di OO_D8R.xls */
+
+  var I18N = {
+    id:{
+      title:'Appraisal Unit Bekas', h1:'Appraisal Unit Bekas',
+      sub:'Nilai wajar dan batas harga beli alat berat dan truck, dengan basis depresiasi Caterpillar.',
+      langLabel:'Bahasa', curLabel:'Mata uang', modeLabel:'Versi', modeSimple:'Sederhana', modeAdv:'Lengkap',
+      placeholder:'Isi data unit di sebelah kiri, lalu tekan "Buat appraisal" untuk melihat hasilnya.',
+      staleMsg:'Input sudah berubah. Hasil di bawah masih dari perhitungan terakhir. Tekan "Buat appraisal" untuk memperbarui.',
+      xNeed:'Tekan "Buat appraisal" dulu supaya file Excel sesuai data terbaru.',
+      modeNoteS:'Versi Sederhana hanya memakai input yang paling berpengaruh. Ban, komponen besar, ongkos kirim, dan harga pembanding baru dihitung di versi Lengkap.',
+      modeNoteA:'Versi Lengkap memakai semua input: ban, komponen besar, ongkos kirim, dan harga pembanding.',
+      s1:'1. Model dan depresiasi', s2:'2. Data unit yang ditawarkan', s3:'3. Koreksi dan margin', s4:'4. Komponen besar (beban perawatan tertunda)',
+      lPreset:'Preset model (Caterpillar sebagai default)', groupCat:'Caterpillar (PHB edisi 34)', groupOther:'Preset lain', groupMine:'Preset saya',
+      lWork:'Kondisi kerja', wLight:'Light (ringan)', wMed:'Medium (sedang)', wHeavy:'Heavy (berat)', wLightS:'Light', wMedS:'Medium', wHeavyS:'Heavy',
+      lPrice:'Harga unit baru ({c})', lRes:'Nilai sisa / resale (%)', lAnnual:'Jam kerja standar per tahun',
+      lLife:'Masa depresiasi (jam) menurut kondisi kerja', lTyre:'Harga ban, satu set ({c})',
+      hint1:'Masa depresiasi dan nilai sisa Caterpillar diambil dari tabel PHB edisi 34 di file OO_D8R.xls. Harga baru hanya tersedia untuk D8R, untuk model lain isi sendiri. Kondisi kerja menentukan masa depresiasi yang dipakai (kotak yang menyala).',
+      phPname:'Nama preset baru', btnSave:'Simpan preset',
+      lUid:'No. seri / ID unit', lSeller:'Penjual', lYear:'Tahun unit', lHm:'HM sekarang', lTread:'Sisa tapak ban (%)', lCond:'Faktor kondisi umum (%)',
+      hint2:'Faktor kondisi 100% berarti normal untuk HM-nya. Kurangi untuk unit yang kondisi mesin atau strukturnya di bawah rata-rata, naikkan bila riwayat servisnya rapi.',
+      lRepair:'Overhaul / perbaikan yang perlu segera ({c})', lMargin:'Margin / risiko Anda (%)', lLogi:'Kirim dan administrasi ({c})',
+      lFx:'Kurs (Rp per US$)', lMkt:'Harga pasar pembanding ({c}, opsional)', phMkt:'harga unit sejenis yang Anda ketahui',
+      hint3:'Isi biaya perbaikan atau overhaul yang pasti harus dikeluarkan pembeli segera. Kurs dipakai untuk konversi antar mata uang.',
+      lOhw:'Bobot beban ke harga (%)', thComp:'Komponen', thCost:'Biaya overhaul / ganti ({c})', thUsed:'% umur terpakai',
+      comp0:'Mesin', comp1:'Transmisi', comp2:'Final drive', comp3:'Hidrolik', comp4:'Undercarriage',
+      hint4:'Isi biaya untuk komponen yang akan jatuh tempo dan perkiraan persen umur yang sudah terpakai sejak overhaul terakhir (atau sejak baru). Potongan = bobot × Σ (biaya × % terpakai). Bobot 50% adalah asumsi awal: sisanya dianggap sudah tercermin di nilai buku.',
+      kBid:'Batas harga beli', kFair:'Nilai wajar unit', kBook:'Nilai buku sesuai HM', sBook:'sebelum koreksi',
+      hRows:'Rincian perhitungan', thItem:'Komponen', thHow:'Cara hitung',
+      hCond:'Nilai buku menurut kondisi kerja', thWork:'Kondisi', thLife:'Masa depresiasi', thDiffSel:'Selisih dari kondisi terpilih',
+      hChart:'Kurva depresiasi', chartAria:'Kurva nilai buku terhadap jam kerja',
+      hSens:'Nilai buku di sekitar HM ini', thBookNt:'Nilai buku tanpa ban', thDiff:'Selisih dari HM sekarang',
+      footer:'<p><strong>Cara membaca.</strong> Nilai buku adalah harga baru dikurangi depresiasi per jam × HM, dengan batas bawah di nilai sisa. Nilai wajar sudah dikoreksi kondisi, beban perawatan, dan perbaikan. Batas harga beli adalah nilai wajar dikurangi margin Anda.</p><p><strong>Yang tidak dihitung.</strong> BBM, oli, grease, filter, upah operator, bunga, dan asuransi tidak mempengaruhi nilai unit. Itu biaya yang dibayar pemilik mana pun, bukan bagian dari nilai mesinnya.</p><p><strong>Sumber.</strong> Caterpillar: tabel PHB edisi 34 dan D8R (US$404.000 DDP Jakarta, resale 20%) dari OO_D8R.xls. Preset lain: HD465-7 dari OO_Cost_HD465-7.pdf (US$620.000, ban 46.800, 26.000 jam, trade-in 30%) dan NHL TR50 dari OO_Cost_NHL50.xls (US$400.000, 15.000 jam, resale 20%). Preset non-Caterpillar hanya punya satu masa depresiasi, jadi dipakai sama untuk ketiga kondisi. Nilai preset berupa US$ dan otomatis dikonversi bila Anda memilih Rp.</p><p><strong>Batas.</strong> Ini estimasi dari model biaya, bukan harga pasar. Cocokkan dengan harga unit sejenis dan hasil inspeksi sebelum menawar.</p>',
+      bAppraisal:'Buat appraisal', bExport:'Export ke Excel',
+      repTitle:'Laporan Appraisal Unit', repClose:'Tutup', repCopy:'Salin teks laporan', repDate:'Tanggal',
+      repUnit:'Data unit', repBasis:'Dasar perhitungan', repAdj:'Koreksi', repResult:'Hasil appraisal',
+      repModel:'Model', repAge:'Umur / pemakaian', repAgeVal:'{0} tahun, {1} jam per tahun',
+      repConcl:'Berdasarkan basis depresiasi Caterpillar, nilai wajar unit diperkirakan {0} dan batas harga beli {1}.',
+      repDisclaimer:'Estimasi dari model biaya, bukan harga pasar. Cocokkan dengan unit sejenis dan hasil inspeksi.',
+      copied:'Teks laporan disalin.', copyFail:'Tidak bisa menyalin otomatis. Blok dan salin teks laporan secara manual.',
+      xSaved:'Excel diekspor.', xDeclined:'Export dibatalkan.', xFail:'Export gagal ({0}).', xNoLib:'Pustaka Excel belum termuat. Muat ulang halaman.',
+      xSheet:'Appraisal', xIn:'Input', xCalc:'Perhitungan', xCur:'Mata uang', xUsdVal:'Batas harga beli dalam US$', xIdrVal:'Batas harga beli dalam Rp',
+      xVsMkt:'Pembanding terhadap nilai wajar', xNote:'Sel kuning adalah input. Ubah nilainya dan rumus akan menghitung ulang.',
+      xWork:'Kondisi kerja (1=Light, 2=Medium, 3=Heavy)', xLifeUsed:'Masa depresiasi dipakai (jam)', xComp:'Komponen besar',
+      xLifeL:'Masa depresiasi Light (jam)', xLifeM:'Masa depresiasi Medium (jam)', xLifeH:'Masa depresiasi Heavy (jam)', xMode:'Versi',
+      warnLife:'HM melewati masa depresiasi ({0} jam). Nilai buku dikunci di nilai sisa.',
+      warnPrice:'Isi harga unit baru supaya perhitungan berjalan.',
+      warnFair:'Koreksi lebih besar dari nilai buku, jadi nilai wajar menjadi nol. Periksa biaya perawatan dan perbaikan.',
+      cmpAbove:'pembanding {0}% di atas nilai wajar', cmpBelow:'pembanding {0}% di bawah nilai wajar', cmpSame:'sama dengan nilai wajar',
+      rPrice:'Harga unit baru', nInput:'Input', rTyreMinus:'Dikurangi harga ban', nTyreSep:'Ban dihitung terpisah',
+      rBase:'Dasar depresiasi', nBase:'Harga baru − ban', rResid:'Nilai sisa', nResid:'{0}% × dasar depresiasi',
+      rNetDep:'Depresiasi bersih', nNetDep:'Dasar − nilai sisa', rPerHr:'Depresiasi per jam', nPerHr:'Depresiasi bersih ÷ {0} jam (kondisi {1})',
+      rDepUsed:'Depresiasi terpakai', nDepUsed:'{0} × {1} HM', rBookNt:'Nilai buku tanpa ban', nBookNt:'Dasar − depresiasi terpakai',
+      rTyreVal:'Nilai ban', nTyreVal:'{0}% × harga ban', rBookTot:'Nilai buku total',
+      rCond:'Setelah faktor kondisi', nCond:'{0}% × nilai buku',
+      rDefer:'Beban perawatan tertunda', nDefer:'{0}% × Σ (biaya × % terpakai)',
+      rRepair:'Overhaul / perbaikan segera', rLogi:'Kirim dan administrasi', rFair:'Nilai wajar unit',
+      rMargin:'Margin / risiko', nMargin:'{0}% × nilai wajar', rBid:'Batas harga beli', nBid:'Penawaran tertinggi yang masih masuk akal',
+      cResid:'Nilai sisa {0}', cXusd:'Jam kerja (HM); sumbu tegak dalam ribu US$', cXidr:'Jam kerja (HM); sumbu tegak dalam juta Rp', cKusd:' rb', cKidr:' jt',
+      uText:'Umur {0} tahun, pemakaian rata-rata {1} jam per tahun dibanding standar {2}',
+      uLow:'di bawah standar', uOk:'sesuai standar', uHigh:'di atas standar',
+      saveName:'Isi nama preset dulu.', saveOk:'Preset "{0}" tersimpan di browser ini.',
+      saveNo:'Preset dipakai untuk sesi ini saja, browser tidak mengizinkan penyimpanan.'
+    },
+    en:{
+      title:'Used Unit Appraisal', h1:'Used Unit Appraisal',
+      sub:'Fair value and maximum purchase price for heavy equipment and trucks, on a Caterpillar depreciation basis.',
+      langLabel:'Language', curLabel:'Currency', modeLabel:'Version', modeSimple:'Simple', modeAdv:'Advanced',
+      placeholder:'Fill in the unit details on the left, then press "Generate appraisal" to see the result.',
+      staleMsg:'The inputs have changed. The results below are still from the last calculation. Press "Generate appraisal" to update them.',
+      xNeed:'Press "Generate appraisal" first so the Excel file matches the latest data.',
+      modeNoteS:'The Simple version uses only the most influential inputs. Tyres, major components, freight and the market reference are counted in the Advanced version.',
+      modeNoteA:'The Advanced version uses every input: tyres, major components, freight and the market reference.',
+      s1:'1. Model and depreciation', s2:'2. Unit being offered', s3:'3. Adjustments and margin', s4:'4. Major components (deferred maintenance)',
+      lPreset:'Model preset (Caterpillar is the default)', groupCat:'Caterpillar (PHB edition 34)', groupOther:'Other presets', groupMine:'My presets',
+      lWork:'Working condition', wLight:'Light', wMed:'Medium', wHeavy:'Heavy', wLightS:'Light', wMedS:'Medium', wHeavyS:'Heavy',
+      lPrice:'New unit price ({c})', lRes:'Residual / resale value (%)', lAnnual:'Standard working hours per year',
+      lLife:'Depreciation period (hours) by working condition', lTyre:'Tyre price, full set ({c})',
+      hint1:'Caterpillar depreciation periods and resale value come from the PHB edition 34 table in OO_D8R.xls. A new price is only on file for the D8R; enter it yourself for other models. The working condition picks which period is used (the highlighted box).',
+      phPname:'New preset name', btnSave:'Save preset',
+      lUid:'Serial no. / unit ID', lSeller:'Seller', lYear:'Unit year', lHm:'Current HM (hours)', lTread:'Remaining tyre tread (%)', lCond:'General condition factor (%)',
+      hint2:'A 100% condition factor means normal for its hours. Lower it for a unit whose engine or structure is below average; raise it if the service history is clean.',
+      lRepair:'Overhaul / repairs needed right away ({c})', lMargin:'Your margin / risk (%)', lLogi:'Freight and admin ({c})',
+      lFx:'Exchange rate (Rp per US$)', lMkt:'Market price reference ({c}, optional)', phMkt:'price of a comparable unit you know',
+      hint3:'Enter repairs or overhauls the buyer will certainly have to pay for soon. The exchange rate converts between currencies.',
+      lOhw:'Weight charged to price (%)', thComp:'Component', thCost:'Overhaul / replace cost ({c})', thUsed:'% life used',
+      comp0:'Engine', comp1:'Transmission', comp2:'Final drive', comp3:'Hydraulics', comp4:'Undercarriage',
+      hint4:'Enter the cost of components that are coming due and the estimated percent of life used since the last overhaul (or since new). Deduction = weight × Σ (cost × % used). The 50% weight is a starting assumption: the rest is treated as already reflected in book value.',
+      kBid:'Maximum purchase price', kFair:'Fair value', kBook:'Book value at this HM', sBook:'before adjustments',
+      hRows:'Calculation breakdown', thItem:'Item', thHow:'How it is calculated',
+      hCond:'Book value by working condition', thWork:'Condition', thLife:'Depreciation period', thDiffSel:'Difference from selected condition',
+      hChart:'Depreciation curve', chartAria:'Book value versus working hours',
+      hSens:'Book value around this HM', thBookNt:'Book value excl. tyres', thDiff:'Difference from current HM',
+      footer:'<p><strong>How to read this.</strong> Book value is the new price less depreciation per hour × HM, floored at the residual value. Fair value is book value adjusted for condition, maintenance burden and repairs. The maximum purchase price is fair value less your margin.</p><p><strong>What is left out.</strong> Fuel, oil, grease, filters, operator wages, interest and insurance do not affect the unit’s value. Any owner pays them; they are not part of what the machine itself is worth.</p><p><strong>Sources.</strong> Caterpillar: the PHB edition 34 table and the D8R (US$404,000 DDP Jakarta, resale 20%) from OO_D8R.xls. Other presets: HD465-7 from OO_Cost_HD465-7.pdf (US$620,000, tyres 46,800, 26,000 hours, trade-in 30%) and NHL TR50 from OO_Cost_NHL50.xls (US$400,000, 15,000 hours, resale 20%). Non-Caterpillar presets have a single depreciation period, so it is used for all three conditions. Preset values are in US$ and convert automatically when you choose Rp.</p><p><strong>Limits.</strong> This is an estimate from a cost model, not a market price. Cross-check it against comparable units and the inspection result before making an offer.</p>',
+      bAppraisal:'Generate appraisal', bExport:'Export to Excel',
+      repTitle:'Unit Appraisal Report', repClose:'Close', repCopy:'Copy report text', repDate:'Date',
+      repUnit:'Unit details', repBasis:'Basis of valuation', repAdj:'Adjustments', repResult:'Appraisal result',
+      repModel:'Model', repAge:'Age / usage', repAgeVal:'{0} years, {1} hours per year',
+      repConcl:'On a Caterpillar depreciation basis, the unit’s fair value is estimated at {0} and the maximum purchase price at {1}.',
+      repDisclaimer:'Estimate from a cost model, not a market price. Cross-check against comparable units and inspection results.',
+      copied:'Report text copied.', copyFail:'Automatic copy is not available. Select and copy the report text manually.',
+      xSaved:'Excel exported.', xDeclined:'Export cancelled.', xFail:'Export failed ({0}).', xNoLib:'The Excel library did not load. Reload the page.',
+      xSheet:'Appraisal', xIn:'Input', xCalc:'Calculation', xCur:'Currency', xUsdVal:'Maximum purchase price in US$', xIdrVal:'Maximum purchase price in Rp',
+      xVsMkt:'Reference vs fair value', xNote:'Yellow cells are inputs. Change them and the formulas recalculate.',
+      xWork:'Working condition (1=Light, 2=Medium, 3=Heavy)', xLifeUsed:'Depreciation period used (hours)', xComp:'Major components',
+      xLifeL:'Depreciation period Light (hours)', xLifeM:'Depreciation period Medium (hours)', xLifeH:'Depreciation period Heavy (hours)', xMode:'Version',
+      warnLife:'HM exceeds the depreciation period ({0} hours). Book value is held at the residual value.',
+      warnPrice:'Enter the new unit price to run the calculation.',
+      warnFair:'Adjustments exceed book value, so fair value is zero. Check the maintenance and repair costs.',
+      cmpAbove:'reference is {0}% above fair value', cmpBelow:'reference is {0}% below fair value', cmpSame:'equal to fair value',
+      rPrice:'New unit price', nInput:'Input', rTyreMinus:'Less tyre price', nTyreSep:'Tyres valued separately',
+      rBase:'Depreciation base', nBase:'New price − tyres', rResid:'Residual value', nResid:'{0}% × depreciation base',
+      rNetDep:'Net depreciation', nNetDep:'Base − residual', rPerHr:'Depreciation per hour', nPerHr:'Net depreciation ÷ {0} hours ({1} condition)',
+      rDepUsed:'Depreciation used', nDepUsed:'{0} × {1} HM', rBookNt:'Book value excl. tyres', nBookNt:'Base − depreciation used',
+      rTyreVal:'Tyre value', nTyreVal:'{0}% × tyre price', rBookTot:'Total book value',
+      rCond:'After condition factor', nCond:'{0}% × book value',
+      rDefer:'Deferred maintenance burden', nDefer:'{0}% × Σ (cost × % used)',
+      rRepair:'Overhaul / repairs needed now', rLogi:'Freight and admin', rFair:'Fair value',
+      rMargin:'Margin / risk', nMargin:'{0}% × fair value', rBid:'Maximum purchase price', nBid:'Highest reasonable offer',
+      cResid:'Residual {0}', cXusd:'Working hours (HM); vertical axis in thousand US$', cXidr:'Working hours (HM); vertical axis in million Rp', cKusd:' k', cKidr:' mn',
+      uText:'Age {0} years, average usage {1} hours per year versus a standard of {2}',
+      uLow:'below standard', uOk:'in line with standard', uHigh:'above standard',
+      saveName:'Enter a preset name first.', saveOk:'Preset "{0}" saved in this browser.',
+      saveNo:'Preset is used for this session only; the browser does not allow storage.'
+    }
+  };
+
+  var LANGKEY = 'appraisal-lang-v1', CURKEY = 'appraisal-cur-v1', MODEKEY = 'appraisal-mode-v1';
+  var lang = 'id', cur = 'USD', mode = 'simple';
+  try {
+    var l0 = localStorage.getItem(LANGKEY); if (l0 === 'id' || l0 === 'en') lang = l0;
+    var c0 = localStorage.getItem(CURKEY); if (c0 === 'USD' || c0 === 'IDR') cur = c0;
+    var m0 = localStorage.getItem(MODEKEY); if (m0 === 'simple' || m0 === 'adv') mode = m0;
+  } catch (e) {}
+  var rc = cur, snap = null, stale = false;   // rc = mata uang yang sedang dirender; snap = hasil appraisal terakhir
+  function sym(code){ return (code || rc) === 'IDR' ? 'Rp' : 'US$'; }
+  function inCur(code, fn){ var old = rc; rc = code; try { return fn(); } finally { rc = old; } }
+  function t(key){
+    var str = (I18N[lang] && I18N[lang][key] != null) ? I18N[lang][key] : (I18N.id[key] != null ? I18N.id[key] : key);
+    for (var i = 1; i < arguments.length; i++) str = str.split('{' + (i - 1) + '}').join(arguments[i]);
+    return str.split('{c}').join(sym());
+  }
+  function esc(x){ return String(x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+  function isAdv(){ return mode === 'adv'; }
+  var WK = ['wLightS','wMedS','wHeavyS'];
+
+  /* ---------- Preset ---------- */
+  var CATP = CATRAW.map(function(r){
+    return {name:r[0], group:'cat', price:null, tyre:0, life:[r[1], r[2], r[3]], res:20, annual:5000};
+  });
+  CATP.forEach(function(p){ if (p.name === 'D8R') p.price = 404000; });
+  CATP.sort(function(a, b){ return (b.name === 'D8R') - (a.name === 'D8R'); });   // D8R paling atas
+  var OTHERP = [
+    {name:'Komatsu HD465-7', group:'other', price:620000, tyre:46800, life:[26000, 26000, 26000], res:30, annual:5400},
+    {name:'NHL TR50 (rigid dump)', group:'other', price:400000, tyre:0, life:[15000, 15000, 15000], res:20, annual:3000}
+  ];
+  var KEY = 'appraisal-presets-v2';
+  var custom = [];
+  try { var s = localStorage.getItem(KEY); if (s) custom = JSON.parse(s) || []; } catch (e) { custom = []; }
+  custom.forEach(function(p){ p.group = 'mine'; });
+
+  var $ = function(id){ return document.getElementById(id); };
+  var MONEY = ['price','tyre','repair','logi','mkt','c0c','c1c','c2c','c3c','c4c'];
+  var STEP = {USD:{price:1000,tyre:100,repair:500,logi:500,mkt:1000,comp:5000}, IDR:{price:10000000,tyre:1000000,repair:5000000,logi:5000000,mkt:10000000,comp:50000000}};
+  var COMPIDS = [];
+  for (var ci = 0; ci < 5; ci++) COMPIDS.push('c' + ci + 'c', 'c' + ci + 'u');
+  var allIds = ['price','tyre','res','annual','lifeL','lifeM','lifeH','work','year','hm','tread','cond','repair','margin','logi','fx','mkt','ohw','uid','seller'].concat(COMPIDS);
+
+  // tabel komponen besar
+  (function(){
+    var g = $('compGrid'), h = '';
+    for (var i = 0; i < 5; i++){
+      h += '<div class="cn" data-i18n="comp' + i + '"></div>' +
+           '<input id="c' + i + 'c" type="number" min="0">' +
+           '<input id="c' + i + 'u" type="number" min="0" max="100" step="5">';
+    }
+    g.insertAdjacentHTML('beforeend', h);
+  })();
+
+  function fxNow(){ var v = parseFloat($('fx').value); return isFinite(v) && v > 0 ? v : 1; }
+  function toCur(usd){ return cur === 'IDR' ? Math.round(usd * fxNow()) : Math.round(usd * 100) / 100; }
+  function toUsd(v){ return cur === 'IDR' ? Math.round(v / fxNow() * 100) / 100 : v; }
+
+  function presets(){ return CATP.concat(OTHERP, custom); }
+  function fillSelect(sel){
+    var sl = $('preset'); sl.innerHTML = '';
+    var gl = {cat:document.createElement('optgroup'), other:document.createElement('optgroup'), mine:document.createElement('optgroup')};
+    gl.cat.label = t('groupCat'); gl.other.label = t('groupOther'); gl.mine.label = t('groupMine');
+    presets().forEach(function(p, i){
+      var o = document.createElement('option'); o.value = i; o.textContent = p.name; gl[p.group].appendChild(o);
+    });
+    ['cat','other','mine'].forEach(function(k){ if (gl[k].children.length) sl.appendChild(gl[k]); });
+    if (sel != null) sl.value = sel;
+  }
+  function applyPreset(i){
+    var p = presets()[i]; if (!p) return;
+    $('price').value = p.price == null ? '' : toCur(p.price);
+    $('tyre').value = toCur(p.tyre || 0);
+    $('res').value = p.res; $('annual').value = p.annual;
+    $('lifeL').value = p.life[0]; $('lifeM').value = p.life[1]; $('lifeH').value = p.life[2];
+  }
+  function setSteps(){
+    ['price','tyre','repair','logi','mkt'].forEach(function(k){ $(k).step = STEP[cur][k]; });
+    for (var i = 0; i < 5; i++) $('c' + i + 'c').step = STEP[cur].comp;
+  }
+
+  // contoh awal: unit D8R (Caterpillar), 12.000 HM
+  var D = {work:1, year:2021, hm:12000, tread:50, cond:100, repair:0, logi:0, margin:10, fx:16000, mkt:'', ohw:50, uid:'', seller:''};
+  Object.keys(D).forEach(function(k){ $(k).value = D[k]; });
+  for (var cj = 0; cj < 5; cj++){ $('c' + cj + 'c').value = 0; $('c' + cj + 'u').value = 50; }
+  fillSelect(0); applyPreset(0);
+
+  function num(id, def){
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : (def == null ? 0 : def);
+  }
+  var nf, nf2;
+  function setLocale(){
+    var loc = lang === 'id' ? 'id-ID' : 'en-US';
+    nf = new Intl.NumberFormat(loc, {maximumFractionDigits:0});
+    nf2 = new Intl.NumberFormat(loc, {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  setLocale();
+  function curFmt(v, code){ return (v < 0 ? '-' : '') + sym(code) + ' ' + nf.format(Math.abs(Math.round(v))); }
+  function pri(v){ return curFmt(v, rc); }
+  function oth(v, fx){ return rc === 'IDR' ? curFmt(v / fx, 'USD') : curFmt(v * fx, 'IDR'); }
+  function plain(v){ return (v < 0 ? '-' : '') + nf.format(Math.abs(Math.round(v))); }
+  function m2(v){ return rc === 'IDR' ? nf.format(Math.round(v)) : nf2.format(v); }
+
+  function compute(){
+    var adv = isAdv();
+    var price = num('price'), life3 = [num('lifeL', 1), num('lifeM', 1), num('lifeH', 1)].map(function(x){ return Math.max(1, x); });
+    var wi = Math.min(2, Math.max(0, parseInt($('work').value, 10) || 0)), life = life3[wi];
+    var res = num('res') / 100, hm = Math.max(0, num('hm')), cond = num('cond', 100) / 100;
+    var repair = num('repair'), margin = num('margin') / 100, fx = fxNow();
+    var tyre = adv ? Math.min(num('tyre'), price) : 0;
+    var tread = adv ? Math.min(100, Math.max(0, num('tread'))) / 100 : 0;
+    var logi = adv ? num('logi') : 0;
+    var ohw = adv ? num('ohw') / 100 : 0;
+    var comps = [], sumCU = 0;
+    for (var i = 0; i < 5; i++){
+      var cc = adv ? num('c' + i + 'c') : 0, cu = Math.min(100, Math.max(0, num('c' + i + 'u'))) / 100;
+      comps.push({cost:cc, used:cu}); sumCU += cc * cu;
+    }
+    var mkRaw = parseFloat($('mkt').value), mkt = adv && isFinite(mkRaw) && mkRaw > 0 ? mkRaw : null;
+
+    var base = price - tyre;
+    var resid = res * base;
+    var netDep = base - resid;
+    var perHr = netDep / life;
+    var usedHm = Math.min(hm, life);
+    var dep = perHr * usedHm;
+    var bookNoTyre = base - dep;
+    var tyreVal = tyre * tread;
+    var book = bookNoTyre + tyreVal;
+    var adj = book * cond;
+    var deferred = ohw * sumCU;
+    var fair = Math.max(0, adj - deferred - repair - logi);
+    var bid = fair * (1 - margin);
+    var byWork = life3.map(function(L){ var ph = netDep / L; return {life:L, book:base - ph * Math.min(hm, L)}; });
+    return {adv:adv, price:price, tyre:tyre, life:life, life3:life3, wi:wi, res:res, hm:hm, tread:tread, cond:cond, ohw:ohw, comps:comps, sumCU:sumCU,
+      repair:repair, logi:logi, margin:margin, fx:fx, mkt:mkt, base:base, resid:resid, netDep:netDep, perHr:perHr, dep:dep,
+      bookNoTyre:bookNoTyre, tyreVal:tyreVal, book:book, adj:adj, deferred:deferred, fair:fair, bid:bid, usedHm:usedHm,
+      annual:num('annual', 1), byWork:byWork,
+      cur:cur, name:presetName(), uid:$('uid').value.trim(), seller:$('seller').value.trim(), yearRaw:$('year').value.trim()};
+  }
+
+  function row(label, val, note, cls){
+    return '<tr class="' + (cls || '') + '"><td>' + label + '</td><td class="n">' + val + '</td><td class="note">' + note + '</td></tr>';
+  }
+  function ageOf(c){
+    if (!c.adv) return null;
+    var yr = parseFloat(c.yearRaw);
+    return isFinite(yr) ? Math.max(1, new Date().getFullYear() - yr) : null;
+  }
+
+  function chart(c){
+    var W = 640, H = 270, L = 72, R = 16, T = 14, B = 38;
+    var pw = W - L - R, ph = H - T - B;
+    var ymax = Math.max(1, c.base * 1.05), ymin = 0;
+    var div = rc === 'IDR' ? 1e6 : 1000;
+    function X(h){ return L + (h / c.life) * pw; }
+    function Y(v){ return T + (1 - (v - ymin) / (ymax - ymin)) * ph; }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+    var yt = 4, i;
+    for (i = 0; i <= yt; i++){
+      var v = ymax * i / yt, y = Y(v);
+      s += '<line class="gridline" x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end">' + nf.format(Math.round(v / div)) + t(rc === 'IDR' ? 'cKidr' : 'cKusd') + '</text>';
+    }
+    var step = c.life > 30000 ? 10000 : (c.life > 20000 ? 5000 : (c.life > 8000 ? 2500 : 1000));
+    for (var h = 0; h <= c.life; h += step){
+      s += '<text x="' + X(h) + '" y="' + (H - 18) + '" text-anchor="middle">' + nf.format(h) + '</text>';
+    }
+    s += '<text x="' + (L + pw / 2) + '" y="' + (H - 3) + '" text-anchor="middle">' + t(rc === 'IDR' ? 'cXidr' : 'cXusd') + '</text>';
+    s += '<path class="area" d="M' + X(0) + ',' + Y(c.base) + ' L' + X(c.life) + ',' + Y(c.resid) + ' L' + X(c.life) + ',' + Y(0) + ' L' + X(0) + ',' + Y(0) + ' Z"/>';
+    s += '<line class="floor" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(c.resid) + '" y2="' + Y(c.resid) + '"/>';
+    s += '<text x="' + (L + 6) + '" y="' + (Y(c.resid) - 5) + '">' + t('cResid', nf.format(Math.round(c.resid))) + '</text>';
+    s += '<path class="curve" d="M' + X(0) + ',' + Y(c.base) + ' L' + X(c.life) + ',' + Y(c.resid) + '"/>';
+    var mx = X(c.usedHm), my = Y(c.bookNoTyre);
+    s += '<line class="markline" x1="' + mx + '" x2="' + mx + '" y1="' + my + '" y2="' + Y(0) + '"/>';
+    s += '<circle class="mark" cx="' + mx + '" cy="' + my + '" r="5"/>';
+    var anchor = mx > W - 200 ? 'end' : 'start', tx = anchor === 'end' ? mx - 9 : mx + 9;
+    s += '<text x="' + tx + '" y="' + (my - 9) + '" text-anchor="' + anchor + '" style="fill:var(--ink);font-weight:600">' + nf.format(Math.round(c.hm)) + ' HM: ' + nf.format(Math.round(c.bookNoTyre)) + '</text>';
+    s += '</svg>';
+    $('chart').innerHTML = s;
+  }
+
+  /* ---------- Laporan appraisal ---------- */
+  var reportOpen = false;
+  function presetName(){ return $('preset').selectedOptions.length ? $('preset').selectedOptions[0].textContent : ''; }
+  function reportData(c){
+    var age = ageOf(c), uid = c.adv ? c.uid : '', seller = c.adv ? c.seller : '';
+    var both = function(v){ return pri(v) + ' (' + oth(v, c.fx) + ')'; };
+    var out = [];
+    out.push({h:t('repUnit')});
+    out.push([t('repModel'), c.name]);
+    if (uid) out.push([t('lUid'), uid]);
+    if (seller) out.push([t('lSeller'), seller]);
+    if (c.adv && isFinite(parseFloat(c.yearRaw))) out.push([t('lYear'), c.yearRaw]);
+    out.push([t('lWork'), t(WK[c.wi]) + ' (' + nf.format(c.life) + ' ' + (lang === 'id' ? 'jam' : 'hours') + ')']);
+    out.push([t('lHm'), nf.format(c.hm)]);
+    if (age) out.push([t('repAge'), t('repAgeVal', age, nf.format(Math.round(c.hm / age)))]);
+    if (c.adv) out.push([t('lTread'), nf.format(Math.round(c.tread * 100)) + '%']);
+    out.push([t('lCond'), nf.format(Math.round(c.cond * 100)) + '%']);
+    out.push({h:t('repBasis')});
+    out.push([t('rPrice'), both(c.price)]);
+    out.push([t('lRes'), nf2.format(c.res * 100) + '%']);
+    out.push([t('rPerHr'), sym() + ' ' + m2(c.perHr)]);
+    out.push([t('rBookTot'), both(c.book)]);
+    out.push({h:t('repAdj')});
+    out.push([t('rCond'), both(c.adj)]);
+    if (c.adv) out.push([t('rDefer'), both(-c.deferred)]);
+    out.push([t('rRepair'), both(-c.repair)]);
+    if (c.adv) out.push([t('rLogi'), both(-c.logi)]);
+    out.push({h:t('repResult')});
+    out.push([t('rFair'), both(c.fair)]);
+    out.push([t('rMargin'), nf.format(Math.round(c.margin * 100)) + '%']);
+    out.push([t('rBid'), both(c.bid)]);
+    if (c.mkt != null && c.fair > 0){
+      var d = (c.mkt / c.fair - 1) * 100;
+      out.push([t('lMkt'), both(c.mkt) + ' — ' + (d > 0 ? t('cmpAbove', nf.format(Math.round(d))) : (d < 0 ? t('cmpBelow', nf.format(Math.round(-d))) : t('cmpSame')))]);
+    }
+    return {rows:out, concl:t('repConcl', both(c.fair), both(c.bid))};
+  }
+  function dateStr(){
+    return new Date().toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB', {day:'numeric', month:'long', year:'numeric'});
+  }
+  function renderReport(c){
+    var r = reportData(c), h = '';
+    r.rows.forEach(function(x){
+      if (x.h) h += '<tr class="sec"><td colspan="2">' + esc(x.h) + '</td></tr>';
+      else h += '<tr><td>' + esc(x[0]) + '</td><td class="n" style="white-space:normal">' + esc(x[1]) + '</td></tr>';
+    });
+    $('repRows').innerHTML = h;
+    $('repConcl').textContent = r.concl;
+    $('repMeta').textContent = t('repDate') + ': ' + dateStr();
+  }
+  function reportText(c){
+    var r = reportData(c), lines = [t('repTitle').toUpperCase(), t('repDate') + ': ' + dateStr(), ''];
+    r.rows.forEach(function(x){
+      if (x.h) lines.push('', x.h.toUpperCase()); else lines.push(x[0] + ': ' + x[1]);
+    });
+    lines.push('', r.concl, t('repDisclaimer'));
+    return lines.join('\n');
+  }
+
+  /* ---------- Export Excel (rumus hidup) ---------- */
+  function buildXlsx(c){
+    var EX = window.ExcelJS;
+    var wb = new EX.Workbook(); wb.creator = 'Appraisal Unit Bekas';
+    var ws = wb.addWorksheet(t('xSheet'));
+    ws.columns = [{width:50},{width:24},{width:16}];
+    var CU = c.cur, F = 'Arial', BLUE = 'FF0000FF', money = '#,##0', money2 = CU === 'IDR' ? '#,##0' : '#,##0.00';
+    var YEL = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'}}, GRN = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE2EFDA'}};
+    function font(o){ return Object.assign({name:F, size:10}, o || {}); }
+    function sec(r, txt, bTxt, cTxt){
+      var cells = [ws.getCell('A' + r), ws.getCell('B' + r), ws.getCell('C' + r)];
+      cells[0].value = txt; if (bTxt) cells[1].value = bTxt; if (cTxt) cells[2].value = cTxt;
+      cells.forEach(function(x){ x.font = font({bold:true, size:11}); x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFD9E1F2'}}; });
+      cells[1].alignment = {horizontal:'right'}; cells[2].alignment = {horizontal:'right'};
+    }
+    function put(r, label, val, fmt, isInput, bold){
+      var a = ws.getCell('A' + r), b = ws.getCell('B' + r);
+      a.value = label; a.font = font({bold:!!bold});
+      b.value = val; b.font = font({color:isInput ? {argb:BLUE} : undefined, bold:!!bold});
+      if (fmt) b.numFmt = fmt;
+      if (isInput) b.fill = YEL;
+      b.alignment = {horizontal:'right'};
+    }
+    function fml(r, label, f, result, fmt, bold){ put(r, label, {formula:f, result:result}, fmt, false, bold); }
+
+    ws.getCell('A1').value = t('repTitle'); ws.getCell('A1').font = font({bold:true, size:14});
+    ws.getCell('A2').value = t('repDate') + ': ' + dateStr() + '  |  ' + t('xMode') + ': ' + t(c.adv ? 'modeAdv' : 'modeSimple'); ws.getCell('A2').font = font({italic:true, size:9});
+    ws.getCell('A3').value = t('xNote'); ws.getCell('A3').font = font({italic:true, size:9});
+
+    sec(4, t('xIn'));
+    var yr = parseFloat(c.yearRaw);
+    put(5, t('repModel'), c.name, null, true);
+    put(6, t('lUid'), (c.adv && c.uid) || null, null, true);
+    put(7, t('lSeller'), (c.adv && c.seller) || null, null, true);
+    put(8, t('lYear'), (c.adv && isFinite(yr)) ? yr : null, '0', true);
+    put(9, t('xCur'), CU, null, true);
+    put(10, t('lFx'), c.fx, money, true);
+    put(11, t('xWork'), c.wi + 1, '0', true);
+    put(12, t('xLifeL'), c.life3[0], money, true);
+    put(13, t('xLifeM'), c.life3[1], money, true);
+    put(14, t('xLifeH'), c.life3[2], money, true);
+    put(15, t('lPrice'), c.price, money, true);
+    put(16, t('lTyre'), c.tyre, money, true);
+    put(17, t('lRes'), c.res, '0.0%', true);
+    put(18, t('lAnnual'), c.annual, money, true);
+    put(19, t('lHm'), c.hm, money, true);
+    put(20, t('lTread'), c.tread, '0%', true);
+    put(21, t('lCond'), c.cond, '0%', true);
+    put(22, t('lRepair'), c.repair, money, true);
+    put(23, t('lLogi'), c.logi, money, true);
+    put(24, t('lOhw'), c.ohw, '0%', true);
+    put(25, t('lMargin'), c.margin, '0.0%', true);
+    put(26, t('lMkt'), c.mkt, money, true);
+
+    sec(28, t('xComp'), t('thCost'), t('thUsed'));
+    for (var i = 0; i < 5; i++){
+      var r = 29 + i;
+      put(r, t('comp' + i), c.comps[i].cost, money, true);
+      var cc = ws.getCell('C' + r); cc.value = c.comps[i].used; cc.numFmt = '0%'; cc.font = font({color:{argb:BLUE}}); cc.fill = YEL; cc.alignment = {horizontal:'right'};
+    }
+
+    sec(35, t('xCalc'));
+    fml(36, t('xLifeUsed'), 'CHOOSE(B11,B12,B13,B14)', c.life, money);
+    fml(37, t('rBase'), 'B15-B16', c.base, money);
+    fml(38, t('rResid'), 'B17*B37', c.resid, money);
+    fml(39, t('rNetDep'), 'B37-B38', c.netDep, money);
+    fml(40, t('rPerHr'), 'B39/B36', c.perHr, money2);
+    fml(41, t('rDepUsed'), 'B40*MIN(B19,B36)', c.dep, money);
+    fml(42, t('rBookNt'), 'B37-B41', c.bookNoTyre, money, true);
+    fml(43, t('rTyreVal'), 'B16*B20', c.tyreVal, money);
+    fml(44, t('rBookTot'), 'B42+B43', c.book, money, true);
+    fml(45, t('rCond'), 'B44*B21', c.adj, money);
+    fml(46, t('rDefer'), 'B24*SUMPRODUCT(B29:B33,C29:C33)', c.deferred, money);
+    fml(47, t('rFair'), 'MAX(0,B45-B46-B22-B23)', c.fair, money, true);
+    fml(48, t('rMargin'), 'B47*B25', c.fair - c.bid, money);
+    fml(49, t('rBid'), 'B47-B48', c.bid, money, true);
+    fml(50, t('xUsdVal'), 'IF(B9="IDR",B49/B10,B49)', CU === 'IDR' ? c.bid / c.fx : c.bid, '#,##0');
+    fml(51, t('xIdrVal'), 'IF(B9="IDR",B49,B49*B10)', CU === 'IDR' ? c.bid : c.bid * c.fx, '#,##0');
+    var vs = (c.mkt != null && c.fair > 0) ? c.mkt / c.fair - 1 : '';
+    fml(52, t('xVsMkt'), 'IF(AND(ISNUMBER(B26),B26>0,B47>0),B26/B47-1,"")', vs, '0.0%');
+    ws.getCell('B47').fill = GRN; ws.getCell('B49').fill = GRN;
+    ws.getCell('A54').value = t('repDisclaimer'); ws.getCell('A54').font = font({italic:true, size:9});
+    return wb;
+  }
+
+  var dl = null;
+  function flash(id, msg){ $(id).textContent = msg; }
+
+  /* ---------- Render utama ---------- */
+  function renderResults(){
+    if (!snap) return;
+    var c = snap, rcOld = rc; rc = c.cur;
+    $('results').hidden = false; $('placeholder').hidden = true;
+    var w = '';
+    if (c.hm > c.life) w += '<div class="alert">' + t('warnLife', nf.format(c.life)) + '</div>';
+    if (c.price <= 0) w += '<div class="alert">' + t('warnPrice') + '</div>';
+    if (c.fair === 0 && c.price > 0) w += '<div class="alert">' + t('warnFair') + '</div>';
+    $('warn').innerHTML = w;
+
+    $('tBid').textContent = pri(c.bid);
+    $('tBidRp').textContent = oth(c.bid, c.fx);
+    $('tFair').textContent = pri(c.fair);
+    $('tFairRp').textContent = oth(c.fair, c.fx);
+    $('tBook').textContent = pri(c.book);
+    $('tBookS').textContent = t('sBook');
+    $('thCur').textContent = sym();
+
+    var cmp = '';
+    if (c.mkt != null && c.fair > 0){
+      var d = (c.mkt / c.fair - 1) * 100;
+      var cls = Math.abs(d) <= 10 ? 'good' : (d > 0 ? 'bad' : 'warn');
+      var txt = d > 0 ? t('cmpAbove', nf.format(Math.round(d))) : (d < 0 ? t('cmpBelow', nf.format(Math.round(-d))) : t('cmpSame'));
+      cmp = '<span class="pill ' + cls + '">' + txt + '</span>';
+    }
+
+    var r = '';
+    r += row(t('rPrice'), plain(c.price), t('nInput'));
+    if (c.adv) r += row(t('rTyreMinus'), plain(-c.tyre), t('nTyreSep'), 'neg');
+    r += row(t('rBase'), plain(c.base), c.adv ? t('nBase') : '', 'sum');
+    r += row(t('rResid'), plain(c.resid), t('nResid', nf2.format(c.res * 100)));
+    r += row(t('rNetDep'), plain(c.netDep), t('nNetDep'));
+    r += row(t('rPerHr'), m2(c.perHr), t('nPerHr', nf.format(c.life), t(WK[c.wi])));
+    r += row(t('rDepUsed'), plain(-c.dep), t('nDepUsed', m2(c.perHr), nf.format(c.usedHm)), 'neg');
+    r += row(t('rBookNt'), plain(c.bookNoTyre), t('nBookNt'), 'sum');
+    if (c.adv){
+      r += row(t('rTyreVal'), plain(c.tyreVal), t('nTyreVal', nf.format(Math.round(c.tread * 100))));
+      r += row(t('rBookTot'), plain(c.book), '', 'sum');
+    }
+    r += row(t('rCond'), plain(c.adj), t('nCond', nf.format(Math.round(c.cond * 100))));
+    if (c.adv) r += row(t('rDefer'), plain(-c.deferred), t('nDefer', nf.format(Math.round(c.ohw * 100))), 'neg');
+    r += row(t('rRepair'), plain(-c.repair), t('nInput'), 'neg');
+    if (c.adv) r += row(t('rLogi'), plain(-c.logi), t('nInput'), 'neg');
+    r += row(t('rFair'), plain(c.fair), cmp, 'sum');
+    r += row(t('rMargin'), plain(-(c.fair - c.bid)), t('nMargin', nf.format(Math.round(c.margin * 100))), 'neg');
+    r += row(t('rBid'), plain(c.bid), t('nBid'), 'sum');
+    $('rows').innerHTML = r;
+
+    var ct = '';
+    c.byWork.forEach(function(b, i){
+      var dd = b.book - c.byWork[c.wi].book;
+      ct += '<tr class="' + (i === c.wi ? 'sel' : '') + '"><td>' + t(WK[i]) + '</td><td class="n">' + nf.format(b.life) + '</td><td class="n">' + plain(b.book) + '</td><td class="n">' + (i === c.wi ? '-' : (dd > 0 ? '+' : '') + plain(dd)) + '</td></tr>';
+    });
+    $('condTbl').innerHTML = ct;
+
+    chart(c);
+
+    var age = ageOf(c), u = '';
+    if (age){
+      var perYr = c.hm / age, ratio = perYr / Math.max(1, c.annual);
+      var pc = ratio <= 1.1 ? 'good' : (ratio <= 1.4 ? 'warn' : 'bad');
+      var lab = ratio <= 0.85 ? t('uLow') : (ratio <= 1.1 ? t('uOk') : t('uHigh'));
+      u = '<p>' + t('uText', age, nf.format(Math.round(perYr)), nf.format(c.annual)) + ' <span class="pill ' + pc + '">' + lab + '</span></p>';
+    }
+    $('usage').innerHTML = u;
+
+    var offs = [-4000, -2000, 0, 2000, 4000], sr = '';
+    offs.forEach(function(o){
+      var h = Math.max(0, c.hm + o);
+      var v = c.base - c.perHr * Math.min(h, c.life);
+      var dd = v - c.bookNoTyre;
+      sr += '<tr class="' + (o === 0 ? 'sum' : '') + '"><td>' + nf.format(h) + '</td><td class="n">' + plain(v) + '</td><td class="n">' + (o === 0 ? '-' : (dd > 0 ? '+' : '') + plain(dd)) + '</td></tr>';
+    });
+    $('sens').innerHTML = sr;
+
+    if (reportOpen) renderReport(c);
+    rc = rcOld;
+  }
+
+  function updateActive(){
+    var wi = parseInt($('work').value, 10) || 0;
+    ['t0','t1','t2'].forEach(function(k, i){
+      var el = document.querySelector('#triLife .' + k); if (el) el.className = k + (i === wi ? ' on' : '');
+    });
+  }
+  function updateStaleUI(){
+    $('stale').hidden = !(snap && stale);
+    $('results').classList.toggle('stale', !!(snap && stale));
+  }
+  function onEdit(){ if (snap){ stale = true; } updateStaleUI(); updateActive(); }
+
+  function applyLang(){
+    rc = cur;
+    document.documentElement.lang = lang;
+    document.title = t('title');
+    document.body.setAttribute('data-mode', mode);
+    var i, els;
+    els = document.querySelectorAll('[data-i18n]');
+    for (i = 0; i < els.length; i++) els[i].textContent = t(els[i].getAttribute('data-i18n'));
+    els = document.querySelectorAll('[data-i18n-html]');
+    for (i = 0; i < els.length; i++) els[i].innerHTML = t(els[i].getAttribute('data-i18n-html'));
+    els = document.querySelectorAll('[data-i18n-ph]');
+    for (i = 0; i < els.length; i++) els[i].setAttribute('placeholder', t(els[i].getAttribute('data-i18n-ph')));
+    els = document.querySelectorAll('[data-i18n-aria]');
+    for (i = 0; i < els.length; i++) els[i].setAttribute('aria-label', t(els[i].getAttribute('data-i18n-aria')));
+    for (i = 0; i < 5; i++){
+      $('c' + i + 'c').setAttribute('aria-label', t('comp' + i) + ' - ' + t('thCost'));
+      $('c' + i + 'u').setAttribute('aria-label', t('comp' + i) + ' - ' + t('thUsed'));
+    }
+    $('langId').setAttribute('aria-pressed', lang === 'id' ? 'true' : 'false');
+    $('langEn').setAttribute('aria-pressed', lang === 'en' ? 'true' : 'false');
+    $('curUsd').setAttribute('aria-pressed', cur === 'USD' ? 'true' : 'false');
+    $('curIdr').setAttribute('aria-pressed', cur === 'IDR' ? 'true' : 'false');
+    $('modeSimple').setAttribute('aria-pressed', mode === 'simple' ? 'true' : 'false');
+    $('modeAdv').setAttribute('aria-pressed', mode === 'adv' ? 'true' : 'false');
+    ['saveMsg','actMsg','repMsg'].forEach(function(id){ $(id).textContent = ''; });
+    var keep = $('preset').value; fillSelect(keep);
+    setLocale(); setSteps();
+    $('modeNote').textContent = t(isAdv() ? 'modeNoteA' : 'modeNoteS');
+    updateActive();
+    renderResults(); updateStaleUI();
+    if (reportOpen && snap) inCur(snap.cur, function(){ renderReport(snap); });
+  }
+  function setLang(l){ lang = l; try { localStorage.setItem(LANGKEY, l); } catch (e) {} applyLang(); }
+  function setMode(m){ if (snap && m !== mode) stale = true; mode = m; try { localStorage.setItem(MODEKEY, m); } catch (e) {} applyLang(); }
+  function setCur(code){
+    if (code === cur) return;
+    var fx = fxNow();
+    MONEY.forEach(function(k){
+      var raw = $(k).value.trim(); if (raw === '') return;
+      var v = parseFloat(raw); if (!isFinite(v)) return;
+      if (code === 'IDR') $(k).value = Math.round(v * fx);
+      else $(k).value = Math.round(v / fx * 100) / 100;
+    });
+    cur = code;
+    try { localStorage.setItem(CURKEY, code); } catch (e) {}
+    applyLang();
+  }
+  $('langId').addEventListener('click', function(){ setLang('id'); });
+  $('langEn').addEventListener('click', function(){ setLang('en'); });
+  $('curUsd').addEventListener('click', function(){ setCur('USD'); });
+  $('curIdr').addEventListener('click', function(){ setCur('IDR'); });
+  $('modeSimple').addEventListener('click', function(){ setMode('simple'); });
+  $('modeAdv').addEventListener('click', function(){ setMode('adv'); });
+
+  allIds.forEach(function(k){ $(k).addEventListener('input', onEdit); $(k).addEventListener('change', onEdit); });
+  $('preset').addEventListener('change', function(){ applyPreset(this.value); onEdit(); });
+  $('savePreset').addEventListener('click', function(){
+    var name = $('pname').value.trim(), msg = $('saveMsg');
+    if (!name){ msg.textContent = t('saveName'); return; }
+    var p = {name:name, group:'mine', price:toUsd(num('price')), tyre:toUsd(num('tyre')), res:num('res'), annual:num('annual', 1),
+             life:[num('lifeL', 1), num('lifeM', 1), num('lifeH', 1)]};
+    var idx = -1; custom.forEach(function(x, i){ if (x.name === name) idx = i; });
+    if (idx >= 0) custom[idx] = p; else custom.push(p);
+    var saved = true;
+    try { localStorage.setItem(KEY, JSON.stringify(custom)); } catch (e) { saved = false; }
+    fillSelect(CATP.length + OTHERP.length + (idx >= 0 ? idx : custom.length - 1));
+    msg.textContent = saved ? t('saveOk', name) : t('saveNo');
+    $('pname').value = '';
+  });
+
+  $('btnAppraisal').addEventListener('click', function(){
+    snap = compute(); stale = false;
+    reportOpen = true; $('report').hidden = false; $('repMsg').textContent = ''; $('actMsg').textContent = '';
+    renderResults(); updateStaleUI();
+    inCur(snap.cur, function(){ renderReport(snap); });
+    try { $('report').scrollIntoView({behavior:'smooth', block:'nearest'}); } catch (e) {}
+  });
+  $('repClose').addEventListener('click', function(){ reportOpen = false; $('report').hidden = true; });
+  $('repCopy').addEventListener('click', function(){
+    if (!snap) return;
+    var txt = inCur(snap.cur, function(){ return reportText(snap); });
+    var ok = function(){ flash('repMsg', t('copied')); }, no = function(){ flash('repMsg', t('copyFail')); };
+    try { navigator.clipboard.writeText(txt).then(ok, no); } catch (e) { no(); }
+  });
+
+  $('btnExport').addEventListener('click', function(){
+    flash('actMsg', '');
+    if (!dl) return;
+    if (!snap || stale){ flash('actMsg', t('xNeed')); return; }
+    if (!window.ExcelJS){ flash('actMsg', t('xNoLib')); return; }
+    var c = snap, wb;
+    try { wb = inCur(c.cur, function(){ return buildXlsx(c); }); } catch (e) { flash('actMsg', t('xFail', 'build')); return; }
+    var nm = (c.name || 'unit').replace(/[^A-Za-z0-9_-]+/g, '_');
+    var yr = c.adv ? c.yearRaw : '';
+    var fname = 'Appraisal_' + nm + (yr ? '_' + yr : '') + '.xlsx';
+    wb.xlsx.writeBuffer().then(function(buf){
+      return dl.save({filename:fname, data:buf});
+    }).then(function(){ flash('actMsg', t('xSaved')); }, function(err){
+      var code = err && err.code;
+      flash('actMsg', code === 'declined' ? t('xDeclined') : t('xFail', code || 'error'));
+    });
+  });
+
+  // kemampuan unduhan: sembunyikan tombol bila tidak tersedia
+  (function(){
+    try {
+      if (window.claude && typeof window.claude.use === 'function'){
+        window.claude.use('downloads').then(function(d){
+          dl = d || null;
+          if (!dl) $('btnExport').hidden = true;
+        }, function(){ $('btnExport').hidden = true; });
+      } else { $('btnExport').hidden = true; }
+    } catch (e) { $('btnExport').hidden = true; }
+  })();
+
+  applyLang();
+  /*TESTHOOK*/
+})();
+</script>
+</body>
+</html>
